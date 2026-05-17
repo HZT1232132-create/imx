@@ -9,12 +9,14 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(TESSERACT REQUIRED tesseract)
 pkg_check_modules(LEPTONICA REQUIRED lept)
 pkg_check_modules(ZBAR REQUIRED zbar)
+pkg_check_modules(GPIOD REQUIRED libgpiod)
 
 include_directories(
     ${OpenCV_INCLUDE_DIRS}
     ${TESSERACT_INCLUDE_DIRS}
     ${LEPTONICA_INCLUDE_DIRS}
     ${ZBAR_INCLUDE_DIRS}
+    ${GPIOD_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/include
 )
 
@@ -53,6 +55,7 @@ target_link_libraries(
     ${TESSERACT_LIBRARIES}
     ${LEPTONICA_LIBRARIES}
     ${ZBAR_LIBRARIES}
+    ${GPIOD_LIBRARIES}
     ${ONNXRUNTIME_LIB}
     ssl
     crypto
