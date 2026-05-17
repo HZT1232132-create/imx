@@ -1,0 +1,15 @@
+test_type,accuracy_pct,latency_ms
+clean,100.0,1.25
+blur,88.5,1.30
+noise,100.0,1.29
+glare,99.0,1.44
+rotation,68.0,0.98
+perspective,85.0,1.30
+occlusion,78.5,1.37
+low_contrast,99.5,1.37
+
+model,size_kb,notes
+PyTorch .pt,5084,training checkpoint
+ONNX,5076,C++ inference (CPU)
+TFLite FP16,89,NPU path (Vela compile pending)
+i.MX93 NPU,N/A,requires FRDM-i.MX93 + eIQ Vela

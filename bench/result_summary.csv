@@ -1,0 +1,5 @@
+mode,total,qr_success,ocr_recovered,ocr_corrected,label_error,unknown,wrong_sort,recognition_rate_pct,high_risk,avg_latency_ms
+baseline,6,2,0,0,3,1,1,33.3,5,26
+ocr,6,2,1,0,1,2,1,50.0,4,54
+full,6,2,1,1,1,1,1,66.7,3,48
+tinyocr,6,2,0,0,0,4,1,33.3,5,43

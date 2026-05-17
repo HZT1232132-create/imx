@@ -1,0 +1,7 @@
+image,current_zone,scene
+pkg001_normal.png,A,正常分拣
+pkg002_wrong.png,A,错误异常
+pkg003_qr_damaged.png,A,二维码损坏OCR补救
+pkg004_ocr_error.png,A,OCR字符识别纠错处理
+pkg005_unknown.png,A,未知货物
+pkg006_unreadable.png,A,标签不可读
