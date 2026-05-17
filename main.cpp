@@ -113,9 +113,9 @@ int main(int argc, char* argv[]) {
     int waitMs = 0;
     std::string mode = "full"; // baseline / ocr / full
 
-    if (argc >= 2) seqPath   = argv[1];
-    if (argc >= 3) rulesPath = argv[2];
-    if (argc >= 4) imageDir  = argv[3];
+    if (argc >= 2 && argv[1][0] != '\0') seqPath   = argv[1];
+    if (argc >= 3 && argv[2][0] != '\0') rulesPath = argv[2];
+    if (argc >= 4 && argv[3][0] != '\0') imageDir  = argv[3];
     if (argc >= 5) waitMs    = std::atoi(argv[4]);
     if (argc >= 6) mode      = argv[5];
 
@@ -127,7 +127,9 @@ int main(int argc, char* argv[]) {
 
     std::cout << "========================================\n";
     std::cout << " i.MX93 仓储标签异常鲁棒识别与分拣告警模拟系统\n";
-    std::cout << " Mode: " << mode << "\n";
+    // Auto-detect headless: skip GUI when no display available
+    bool headless = (std::getenv("DISPLAY") == nullptr) && (std::getenv("WAYLAND_DISPLAY") == nullptr);
+    std::cout << " Mode: " << mode << (headless ? " (headless)" : "") << "\n";
     std::cout << "========================================\n\n";
 
     // 1. Load rules
@@ -516,14 +518,18 @@ int main(int argc, char* argv[]) {
         std::filesystem::create_directories("../output");
         cv::imwrite("../output/frame_" + std::to_string(frameIdx) + ".png", display);
 
-        cv::namedWindow("i.MX93 Sorting Simulator", cv::WINDOW_NORMAL);
-        cv::resizeWindow("i.MX93 Sorting Simulator", 960, 640);
-        cv::imshow("i.MX93 Sorting Simulator", display);
+        if (!headless) {
+            cv::namedWindow("i.MX93 Sorting Simulator", cv::WINDOW_NORMAL);
+            cv::resizeWindow("i.MX93 Sorting Simulator", 960, 640);
+            cv::imshow("i.MX93 Sorting Simulator", display);
 
-        int key = cv::waitKey(waitMs) & 0xFF;
-        if (key == 'q' || key == 27) {
-            std::cout << "\n[USER] Quit requested.\n";
-            break;
+            int key = cv::waitKey(waitMs) & 0xFF;
+            if (key == 'q' || key == 27) {
+                std::cout << "\n[USER] Quit requested.\n";
+                break;
+            }
+        } else {
+            std::cout << "[Headless] Saved ../output/frame_" << frameIdx << ".png\n";
         }
     }
 
@@ -539,7 +545,7 @@ int main(int argc, char* argv[]) {
     hashLogger.writeCSV("../logs/hash_chain.csv");
     std::cout << "[DONE] Hash chain saved to ../logs/hash_chain.csv\n";
 
-    cv::destroyAllWindows();
+    if (!headless) cv::destroyAllWindows();
     std::cout << "\n[DONE] Log saved to ../logs/events.csv\n";
     std::cout << "[DONE] Run validation with: python validate.py ../logs/events.csv expected.csv\n";
     return 0;

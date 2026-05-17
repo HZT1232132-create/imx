@@ -1,8 +1,25 @@
+# Build
 build/
 *.o
 *.out
+
+# Runtime outputs
 logs/
 output/
+
+# Dependencies (large binaries)
 lib/
+*.tgz
+
+# Python
 .venv/
 __pycache__/
+
+# Large data / training
+dataset_id_ocr/
+runs/
+
+# PC-only
+*.docx
+*.bat
+*.zip

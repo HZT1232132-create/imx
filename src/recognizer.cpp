@@ -5,6 +5,7 @@
 #include <vector>
 #include <tesseract/baseapi.h>
 #include <leptonica/allheaders.h>
+#include <zbar.h>
 
 // Shared helper: extract PKG-pattern package ID from raw OCR text.
 // Collects all PKGxxx candidates and prefers pure-digit suffixes
@@ -65,7 +66,6 @@ RecognizeResult PrimaryRecognizer::recognize(const cv::Mat& image) {
         result.rawText = qrData;
         result.packageId = extractPackageId(qrData);
         if (result.packageId.empty()) {
-            // Fallback: strip non-alphanumeric directly
             std::string cleaned;
             for (char c : qrData) {
                 if (std::isalnum(static_cast<unsigned char>(c))) {
@@ -76,6 +76,41 @@ RecognizeResult PrimaryRecognizer::recognize(const cv::Mat& image) {
         }
         result.method = "QR";
         return result;
+    }
+
+    // OpenCV QR failed — try ZBar fallback
+    try {
+        cv::Mat gray;
+        if (image.channels() == 3)
+            cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+        else
+            gray = image.clone();
+
+        zbar::Image zbarImg(gray.cols, gray.rows, "Y800", gray.data, gray.cols * gray.rows);
+        zbar::ImageScanner scanner;
+        scanner.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, 1);
+        scanner.scan(zbarImg);
+
+        for (auto it = zbarImg.symbol_begin(); it != zbarImg.symbol_end(); ++it) {
+            if (it->get_type() == zbar::ZBAR_QRCODE) {
+                std::string data = it->get_data();
+                result.success = true;
+                result.rawText = data;
+                result.packageId = extractPackageId(data);
+                if (result.packageId.empty()) {
+                    std::string cleaned;
+                    for (char c : data) {
+                        if (std::isalnum(static_cast<unsigned char>(c)))
+                            cleaned += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                    }
+                    result.packageId = cleaned;
+                }
+                result.method = "QR_ZBAR";
+                return result;
+            }
+        }
+    } catch (...) {
+        // ZBar failed silently, fall through to OCR
     }
 
     result.success = false;

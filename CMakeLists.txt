@@ -8,17 +8,21 @@ find_package(OpenCV REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(TESSERACT REQUIRED tesseract)
 pkg_check_modules(LEPTONICA REQUIRED lept)
+pkg_check_modules(ZBAR REQUIRED zbar)
 
 include_directories(
     ${OpenCV_INCLUDE_DIRS}
     ${TESSERACT_INCLUDE_DIRS}
     ${LEPTONICA_INCLUDE_DIRS}
+    ${ZBAR_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/include
 )
 
-link_directories(
-    ${CMAKE_SOURCE_DIR}/lib
-)
+# ONNX Runtime — bundled in lib/
+set(ONNXRUNTIME_LIB ${CMAKE_SOURCE_DIR}/lib/libonnxruntime.so)
+if(NOT EXISTS ${ONNXRUNTIME_LIB})
+    message(WARNING "libonnxruntime.so not found in lib/, TinyOCR mode will be unavailable")
+endif()
 
 # RPATH so the binary finds libonnxruntime.so at runtime
 set(CMAKE_INSTALL_RPATH "${CMAKE_SOURCE_DIR}/lib")
@@ -48,7 +52,8 @@ target_link_libraries(
     ${OpenCV_LIBS}
     ${TESSERACT_LIBRARIES}
     ${LEPTONICA_LIBRARIES}
-    onnxruntime
+    ${ZBAR_LIBRARIES}
+    ${ONNXRUNTIME_LIB}
     ssl
     crypto
 )
