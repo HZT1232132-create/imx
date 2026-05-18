@@ -57,16 +57,19 @@ double QualityEngine::computeGlare(const cv::Mat& image) {
     cv::Mat& v = channels[2];
     cv::Mat& s = channels[1];
 
-    // Glare = small bright saturated spots (not large white background)
-    // Find local brightness peaks using small-kernel max filter
-    cv::Mat localMax;
-    cv::dilate(v, localMax, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(11, 11)));
-    cv::Mat isPeak = (v == localMax) & (v > 240) & (s < 30);
-
-    int glareCount = cv::countNonZero(isPeak);
+    // Glare: bright + low-sat spots, but exclude the dominant background color
+    // First, find the most common intensity (background) and exclude it
     int total = v.rows * v.cols;
-    double ratio = static_cast<double>(glareCount) / total;
-    double score = 1.0 - std::min(ratio * 50.0, 1.0);  // 2% peaks = full penalty
+    cv::Mat isGlare = (v > 250) & (s < 20);
+
+    // Only count as glare if it's NOT the dominant uniform background
+    // (uniform white bg: >60% bright+saturated → not glare)
+    double brightRatio = static_cast<double>(cv::countNonZero(v > 240)) / total;
+    if (brightRatio > 0.6)
+        return 1.0;  // mostly white background, no glare
+
+    double ratio = static_cast<double>(cv::countNonZero(isGlare)) / total;
+    double score = 1.0 - std::min(ratio / 0.1, 1.0);  // 10% glare = full penalty
     return std::max(0.0, score);
 }
 
@@ -103,50 +106,63 @@ double QualityEngine::computeAngle(const cv::Mat& gray) {
 }
 
 double QualityEngine::computeOcclusion(const cv::Mat& gray) {
-    int cellRows = 6, cellCols = 6;
+    // Occlusion = large uniform dark/light regions that drown out detail
+    // Use entropy of the gradient magnitude histogram — occluded areas have no edges
+    cv::Mat edges;
+    cv::Canny(gray, edges, 50, 150);
+
+    int cellRows = 4, cellCols = 4;
     int cellH = gray.rows / cellRows;
     int cellW = gray.cols / cellCols;
     if (cellH < 8 || cellW < 8) return 0.8;
 
-    int deadCells = 0;
+    int blankCells = 0;
     int totalCells = cellRows * cellCols;
 
     for (int r = 0; r < cellRows; ++r) {
         for (int c = 0; c < cellCols; ++c) {
             cv::Rect roi(c * cellW, r * cellH, cellW, cellH);
-            cv::Mat cell = gray(roi);
-            cv::Scalar mean, stddev;
-            cv::meanStdDev(cell, mean, stddev);
-            // Only truly uniform cells (stddev < 5, not < 15) are "dead"
-            if (stddev.val[0] < 5.0) deadCells++;
+            // Cell with zero edges = completely blank/occluded
+            if (cv::countNonZero(edges(roi)) == 0)
+                blankCells++;
         }
     }
 
-    double ratio = static_cast<double>(deadCells) / totalCells;
-    double score = 1.0 - std::min(ratio / 0.25, 1.0);  // 25% dead = full penalty
+    double ratio = static_cast<double>(blankCells) / totalCells;
+    // Only penalize when >50% of image has no edges (truly occluded)
+    if (ratio < 0.5) return 1.0;
+    double score = 1.0 - std::min((ratio - 0.5) * 3.0, 1.0);
     return std::max(0.0, score);
 }
 
 double QualityEngine::computeDamage(const cv::Mat& gray) {
-    // Damage = fragmented edges, detected via edge pixel connectivity.
-    // A clean label has long, continuous edges; damage creates short fragments.
+    // Damage = missing or broken regions in what should be continuous features.
+    // Quantify via local edge density consistency — damage creates uneven distribution.
     cv::Mat edges;
     cv::Canny(gray, edges, 50, 150);
 
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(edges, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+    int cellRows = 4, cellCols = 4;
+    int cellH = gray.rows / cellRows;
+    int cellW = gray.cols / cellCols;
+    if (cellH < 8 || cellW < 8) return 0.8;
 
-    // Count short edge fragments (< 30 px) vs total fragments
-    int shortFragments = 0;
-    int totalFragments = contours.size();
-    if (totalFragments < 5) return 1.0;
-
-    for (const auto& c : contours) {
-        if (cv::arcLength(c, false) < 30)
-            shortFragments++;
+    std::vector<double> densities;
+    for (int r = 0; r < cellRows; ++r) {
+        for (int c = 0; c < cellCols; ++c) {
+            cv::Rect roi(c * cellW, r * cellH, cellW, cellH);
+            int edgePx = cv::countNonZero(edges(roi));
+            densities.push_back(static_cast<double>(edgePx) / (cellW * cellH));
+        }
     }
-    double ratio = static_cast<double>(shortFragments) / totalFragments;
-    // >60% short fragments = severe damage
-    double score = 1.0 - std::min(ratio / 0.6, 1.0);
+
+    double sum = 0;
+    for (double d : densities) sum += d;
+    double mean = sum / densities.size();
+    double sqSum = 0;
+    for (double d : densities) sqSum += (d - mean) * (d - mean);
+    double cv = std::sqrt(sqSum / densities.size()) / std::max(mean, 0.001);
+
+    // Coefficient of variation: >2.0 = severe unevenness (damage)
+    double score = 1.0 - std::min(cv / 2.0, 1.0);
     return std::max(0.0, score);
 }

@@ -16,7 +16,6 @@ AnomalyResult AnomalyDetector::detect(const cv::Mat& image) {
     r.overlayScore = detectOverlay(gray);
     r.overallAnomaly = std::max({r.tearScore, r.stainScore, r.overlayScore});
 
-    // Determine dominant type
     double best = std::max({r.tearScore, r.stainScore, r.overlayScore});
     if (best < 0.5) {
         r.anomalyType = "none";
@@ -34,55 +33,81 @@ AnomalyResult AnomalyDetector::detect(const cv::Mat& image) {
     return r;
 }
 
-// ── Tear: median-filter residue contains large connected components ──
+// ── Tear: ratio of short edge fragments to total, excluding text-like fragments ──
 double AnomalyDetector::detectTear(const cv::Mat& gray) {
-    cv::Mat med, diff, binary;
-    cv::medianBlur(gray, med, 15);           // large kernel removes text
-    cv::absdiff(gray, med, diff);            // residue = text + damage
-    cv::threshold(diff, binary, 50, 255, cv::THRESH_BINARY);
+    cv::Mat edges;
+    cv::Canny(gray, edges, 50, 150);
+
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(edges, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
+
+    if (contours.empty()) return 0.0;
+
+    int irregularFragments = 0;
+    int totalFragments = contours.size();
+
+    for (const auto& c : contours) {
+        double len = cv::arcLength(c, false);
+        if (len < 2) continue;  // noise
+
+        // Text edges are straight/smooth short segments with small bounding box
+        // Tear edges are irregular zig-zag patterns
+        cv::Rect br = cv::boundingRect(c);
+        double aspectRatio = std::max(br.width, br.height) /
+                             std::max(1.0, static_cast<double>(std::min(br.width, br.height)));
+
+        // Irregular: short segment, high aspect ratio (line-like) but not straight
+        if (len < 40 && aspectRatio > 5.0) {
+            // Check if it's a straight line (text edge) or jagged (tear)
+            std::vector<cv::Point> approx;
+            cv::approxPolyDP(c, approx, len * 0.08, false);  // 8% epsilon = high tolerance
+            // Many vertices relative to length = jagged = tear
+            if (approx.size() > static_cast<size_t>(len / 8))
+                irregularFragments++;
+        }
+    }
+
+    double ratio = static_cast<double>(irregularFragments) /
+                   std::max(1, totalFragments);
+    return std::min(ratio / 0.3, 1.0);  // 30% irregular = full tear
+}
+
+// ── Stain: dark/bright blobs significantly different from blurred background ──
+double AnomalyDetector::detectStain(const cv::Mat& gray) {
+    cv::Mat blurred, residual, binary;
+    cv::GaussianBlur(gray, blurred, cv::Size(21, 21), 0);
+    cv::absdiff(gray, blurred, residual);
+
+    cv::Scalar mu, sigma;
+    cv::meanStdDev(residual, mu, sigma);
+    double meanResidual = mu.val[0];
+    double stdResidual = sigma.val[0];
+
+    // Stain = regions where residual is 3 sigma above mean
+    cv::threshold(residual, binary, meanResidual + 3.0 * stdResidual, 255, cv::THRESH_BINARY);
 
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(binary, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
-    // Large connected components = potential tears (text components are small)
-    double maxArea = 0;
     double totalArea = gray.rows * gray.cols;
+    double maxArea = 0;
     for (const auto& c : contours) {
         double area = cv::contourArea(c);
-        if (area > maxArea) maxArea = area;
+        cv::Rect br = cv::boundingRect(c);
+        double density = area / std::max(1.0, static_cast<double>(br.area()));
+        if (density > 0.5 && area > maxArea) maxArea = area;
     }
-    return std::min(maxArea / (totalArea * 0.05), 1.0);  // 5% of image = tear
+
+    return std::min(maxArea / totalArea / 0.05, 1.0);
 }
 
-// ── Stain: dark/bright blobs that survive median filtering ──
-double AnomalyDetector::detectStain(const cv::Mat& gray) {
-    cv::Mat med, diff, binary;
-    cv::medianBlur(gray, med, 21);           // large kernel for stain isolation
-    cv::absdiff(gray, med, diff);
-    cv::threshold(diff, binary, 40, 255, cv::THRESH_BINARY);
-
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(binary, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-    // Count blobs with area > 0.5% of image (larger than typical character)
-    double minBlobArea = gray.rows * gray.cols * 0.005;
-    double stainArea = 0;
-    double totalArea = gray.rows * gray.cols;
-    for (const auto& c : contours) {
-        double a = cv::contourArea(c);
-        if (a > minBlobArea) stainArea += a;
-    }
-    return std::min(stainArea / (totalArea * 0.1), 1.0);  // 10% of image stained
-}
-
-// ── Overlay: region with distinctly different histogram from neighbors ──
+// ── Overlay: grid cell with significantly different histogram from neighbors ──
 double AnomalyDetector::detectOverlay(const cv::Mat& gray) {
     int cellSize = 40;
     int cols = gray.cols / cellSize;
     int rows = gray.rows / cellSize;
     if (cols < 3 || rows < 3) return 0.0;
 
-    // Compute mean intensity per cell
     std::vector<std::vector<double>> cellMeans(rows, std::vector<double>(cols));
     double totalMean = 0;
     int n = 0;
@@ -98,13 +123,11 @@ double AnomalyDetector::detectOverlay(const cv::Mat& gray) {
     if (n == 0) return 0.0;
     totalMean /= n;
 
-    // Find cells that differ from global mean by >30 intensity levels
     int outlierCells = 0;
     for (int r = 0; r < rows; ++r)
         for (int c = 0; c < cols; ++c)
             if (std::abs(cellMeans[r][c] - totalMean) > 30)
                 outlierCells++;
 
-    double ratio = static_cast<double>(outlierCells) / n;
-    return std::min(ratio / 0.3, 1.0);       // 30% outliers = full overlay score
+    return std::min(static_cast<double>(outlierCells) / (n * 0.3), 1.0);
 }
