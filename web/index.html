@@ -78,30 +78,15 @@
       <div class="task-grid" id="m33_tasks"></div>
     </div>
 
-    <!-- Sort Routing: 4 Chutes with Gates -->
+    <!-- Sort Routing: Conveyor Belt Animation -->
     <div class="panel full-width">
-      <div class="panel-title">分拣路由 — 四滑槽闸门</div>
-      <div class="gates-row">
-        <div class="chute-box" id="chuteBoxA">
-          <div class="chute-icon">🚪</div>
-          <div class="chute-label">滑槽 A</div>
-          <div class="chute-gate" id="gateBarA">▊ 关闭 ▊</div>
-        </div>
-        <div class="chute-box" id="chuteBoxB">
-          <div class="chute-icon">🚪</div>
-          <div class="chute-label">滑槽 B</div>
-          <div class="chute-gate" id="gateBarB">▊ 关闭 ▊</div>
-        </div>
-        <div class="chute-box" id="chuteBoxC">
-          <div class="chute-icon">🚪</div>
-          <div class="chute-label">滑槽 C</div>
-          <div class="chute-gate" id="gateBarC">▊ 关闭 ▊</div>
-        </div>
-        <div class="chute-box" id="chuteBoxReview">
-          <div class="chute-icon">🔍</div>
-          <div class="chute-label">复核区</div>
-          <div class="chute-gate" id="gateBarReview">▊ 关闭 ▊</div>
-        </div>
+      <div class="panel-title">分拣传送带</div>
+      <canvas id="beltCanvas" width="1100" height="140"></canvas>
+      <div class="zone-labels">
+        <span class="zone-label" style="left:180px">A区</span>
+        <span class="zone-label" style="left:390px">B区</span>
+        <span class="zone-label" style="left:600px">C区</span>
+        <span class="zone-label" style="left:810px">复核区</span>
       </div>
       <div class="sort-route" id="sortRoute">
         <span class="route-item" id="route_pkg">PKG—</span>
