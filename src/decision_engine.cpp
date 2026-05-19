@@ -51,10 +51,15 @@ DecisionResult DecisionEngine::evaluate(int idStatus, int sortStatus,
         return r;  // LEVEL_3_HIGH per spec
     }
 
-    // OCR_CORRECTED + confidence < 0.75 -> LEVEL_2_MEDIUM
-    if (idStatus == static_cast<int>(IdStatus::OCR_CORRECTED) && r.confidence < 0.75) {
-        r.action = "REVIEW";
-        r.reason = "OCR corrected with moderate confidence — flag for human review";
+    // OCR_CORRECTED: allow passing if confidence >= 0.60
+    if (idStatus == static_cast<int>(IdStatus::OCR_CORRECTED)) {
+        if (r.confidence >= 0.60) {
+            r.action = "PASS_WITH_LOG";
+            r.reason = "OCR corrected with adequate confidence — may proceed with log";
+        } else {
+            r.action = "REVIEW";
+            r.reason = "OCR corrected but low confidence — human review needed";
+        }
         return r;
     }
 
