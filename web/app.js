@@ -350,15 +350,13 @@ function drawBeltFrame() {
     { x:760, label:'复核', color:'#f472b6' }
   ];
 
-  const activeZone = BELT.action === 'REVIEW' ? '复核' :
-    (BELT.action === 'BLOCK' ? '' : (BELT.targetZone||''));
+  const activeZone = BELT.action === 'REVIEW' ? '复核' : (BELT.targetZone||'');
 
   exits.forEach(ex => {
-    const isActive = (BELT.action !== 'BLOCK') && (activeZone === ex.label);
-    const blocked = BELT.action === 'BLOCK';
+    const isActive = (activeZone === ex.label);
 
-    // Chute opening (downward triangle)
-    ctx.fillStyle = isActive ? ex.color : (blocked ? '#ef4444' : '#475569');
+    // Chute opening
+    ctx.fillStyle = isActive ? ex.color : '#475569';
     ctx.beginPath();
     ctx.moveTo(ex.x-14, beltY+beltH);
     ctx.lineTo(ex.x+14, beltY+beltH);
@@ -366,24 +364,21 @@ function drawBeltFrame() {
     ctx.closePath();
     ctx.fill();
 
-    // Gate bars
+    // Gate bars: open if active, closed otherwise
     if (isActive) {
-      // Open: bars retracted to sides
       ctx.fillStyle = ex.color;
       ctx.fillRect(ex.x-20, beltY-16, 4, 14);
       ctx.fillRect(ex.x+16, beltY-16, 4, 14);
       ctx.fillRect(ex.x-20, beltY+beltH-20, 4, 14);
       ctx.fillRect(ex.x+16, beltY+beltH-20, 4, 14);
     } else {
-      // Closed: bars across
-      ctx.fillStyle = blocked ? '#ef4444' : '#475569';
+      ctx.fillStyle = '#475569';
       ctx.fillRect(ex.x-14, beltY-8, 4, beltH+14);
       ctx.fillRect(ex.x-6, beltY-8, 4, beltH+14);
       ctx.fillRect(ex.x+2, beltY-8, 4, beltH+14);
       ctx.fillRect(ex.x+10, beltY-8, 4, beltH+14);
     }
 
-    // Label
     ctx.fillStyle = ex.color;
     ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
@@ -392,8 +387,8 @@ function drawBeltFrame() {
 
   // Package movement
   const arrived = BELT.pkgX >= BELT.targetX - 2 && BELT.pkgX <= BELT.targetX + 2;
-  if (arrived && !BELT.pkgOut && BELT.action !== 'BLOCK') {
-    BELT.pkgOut = true;  // start sliding out
+  if (arrived && !BELT.pkgOut) {
+    BELT.pkgOut = true;
   }
   if (BELT.pkgOut) {
     BELT.pkgY += 1.5;  // slide down through gate
@@ -411,8 +406,7 @@ function drawBeltFrame() {
     ctx.fillRect(px-13, py+17, 26, 8);
 
     // Box
-    const pkgColor = BELT.action === 'BLOCK' ? '#ef4444' :
-      (BELT.action === 'REVIEW' ? '#fbbf24' : '#22c55e');
+    const pkgColor = BELT.action === 'REVIEW' ? '#fbbf24' : '#22c55e';
     ctx.fillStyle = pkgColor;
     ctx.fillRect(px-10, py-5, 20, 20);
     ctx.strokeStyle = '#fff';
@@ -450,9 +444,7 @@ function updateGates(m33, targetZone, action) {
 
   resetPackage();
 
-  if (action === 'BLOCK') {
-    BELT.targetX = 20;
-  } else if (action === 'REVIEW') {
+  if (action === 'REVIEW') {
     BELT.targetX = 760;
   } else {
     BELT.targetX = zoneMap[targetZone] || 160;
