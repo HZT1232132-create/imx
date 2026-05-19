@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 // 光电/急停传感器状态
 struct SensorState {
