@@ -63,20 +63,21 @@ function render() {
   }
 
   // A55 pipeline
-  setText('a55_pkgId', e.final_package_id||'—');
-  setText('a55_method', e.recognition_method||'—');
-  setText('a55_qr', e.qr_result||'—');
-  setText('a55_ocr', e.ocr_result||'—');
-  setText('a55_target', e.target_zone||'—');
-  setText('a55_current', e.current_zone||'—');
-  setText('a55_sort', e.sort_status||'—');
-  setText('a55_action', e.action||'—');
-  setText('a55_conf', e.decision_confidence ? (e.decision_confidence*100).toFixed(0)+'%' : '—');
+  setText('a55_pkgId', (e.recognition && e.recognition.final_package_id)||'—');
+  const rec = e.recognition || {};
+  setText('a55_method', rec.method||'—');
+  setText('a55_qr', rec.qr_result||'—');
+  setText('a55_ocr', rec.ocr_result||'—');
+  setText('a55_target', e.rule ? e.rule.target_zone : '—');
+  setText('a55_current', e.rule ? e.rule.current_zone : '—');
+  setText('a55_sort', e.rule ? e.rule.sort_status : '—');
+  setText('a55_action', e.decision ? e.decision.action : '—');
+  setText('a55_conf', e.decision && e.decision.confidence ? (e.decision.confidence*100).toFixed(0)+'%' : '—');
 
   // Risk level
   const riskEl = document.getElementById('riskLevel');
   const riskMap = { 'LEVEL_0_NORMAL':'🟢 正常', 'LEVEL_1_LOW':'🔵 低风险', 'LEVEL_2_MEDIUM':'🟡 中等', 'LEVEL_3_HIGH':'🟠 高风险', 'LEVEL_4_CRITICAL':'🔴 危险' };
-  const rk = e.risk_level||'';
+  const rk = e.decision ? e.decision.risk_level||'' : '';
   riskEl.textContent = riskMap[rk] || rk || '—';
   riskEl.className = 'risk-badge risk-' + (rk.includes('0')?0:rk.includes('1')?1:rk.includes('2')?2:rk.includes('3')?3:4);
 
@@ -131,7 +132,7 @@ function render() {
   // Sort route
   const pkgEl = document.getElementById('route_pkg');
   const chuteEl = document.getElementById('route_chute');
-  pkgEl.textContent = e.final_package_id||'PKG—';
+  pkgEl.textContent = (e.recognition && e.recognition.final_package_id)||'PKG—';
   chuteEl.textContent = ({
     'PASS':'滑槽 '+(e.target_zone||'—'),
     'PASS_WITH_LOG':'滑槽 '+(e.target_zone||'—')+' ⚠',
@@ -145,9 +146,11 @@ function render() {
     'REVIEW':'route-review',
     'BLOCK':'route-block'
   };
-  chuteEl.className = 'route-item ' + (chuteClassMap[e.action]||'');
+  const decision = e.decision || {};
+  const rule = e.rule || {};
+  chuteEl.className = 'route-item ' + (chuteClassMap[decision.action]||'');
   // Update gates
-  updateGates(e.m33||{}, e.target_zone||'', e.action||'');
+  updateGates(e.m33||{}, rule.target_zone||'', decision.action||'');
 }
 
 // ── Helpers ──
@@ -221,27 +224,29 @@ async function fetchLatest() {
 function renderLive(e) {
   if (!e) return;
   setText('frameInfo', `LIVE — Frame ${e.frame_id||'?'} — ${e.image_name||''}`);
-  setText('a55_pkgId', e.final_package_id||'—');
-  setText('a55_method', e.recognition_method||'—');
-  setText('a55_qr', e.qr_result||'—');
-  setText('a55_ocr', e.ocr_result||'—');
-  setText('a55_target', e.target_zone||'—');
-  setText('a55_current', e.current_zone||'—');
-  setText('a55_sort', e.sort_status||'—');
-  setText('a55_action', e.action||'—');
-  setText('a55_conf', e.decision_confidence ? (e.decision_confidence*100).toFixed(0)+'%' : '—');
+  setText('a55_pkgId', (e.recognition && e.recognition.final_package_id)||'—');
+  const rec = e.recognition || {};
+  setText('a55_method', rec.method||'—');
+  setText('a55_qr', rec.qr_result||'—');
+  setText('a55_ocr', rec.ocr_result||'—');
+  setText('a55_target', e.rule ? e.rule.target_zone : '—');
+  setText('a55_current', e.rule ? e.rule.current_zone : '—');
+  setText('a55_sort', e.rule ? e.rule.sort_status : '—');
+  setText('a55_action', e.decision ? e.decision.action : '—');
+  setText('a55_conf', e.decision && e.decision.confidence ? (e.decision.confidence*100).toFixed(0)+'%' : '—');
 
   const riskMap = { 'LEVEL_0_NORMAL':'🟢 正常', 'LEVEL_1_LOW':'🔵 低风险', 'LEVEL_2_MEDIUM':'🟡 中等', 'LEVEL_3_HIGH':'🟠 高风险', 'LEVEL_4_CRITICAL':'🔴 危险' };
-  const rk = e.risk_level||'';
+  const rk = e.decision ? e.decision.risk_level||'' : '';
   const riskEl = document.getElementById('riskLevel');
   riskEl.textContent = riskMap[rk] || rk || '—';
   riskEl.className = 'risk-badge risk-' + (rk.includes('0')?0:rk.includes('1')?1:rk.includes('2')?2:rk.includes('3')?3:4);
 
-  setText('hashPrev','Prev: '+(e.prev_hash||'—').substring(0,24)+'...');
-  setText('hashCurr','Curr: '+(e.current_hash||'—').substring(0,24)+'...');
+  const h = e.hash || {};
+  setText('hashPrev','Prev: '+(h.prev_hash||'—').substring(0,24)+'...');
+  setText('hashCurr','Curr: '+(h.current_hash||'—').substring(0,24)+'...');
   const hv = document.getElementById('hashVerify');
-  hv.textContent = e.verify==='PASS'?'✓ HASH PASS':'✗ HASH FAIL';
-  hv.className = 'badge ' + (e.verify==='PASS'?'pass':'fail');
+  hv.textContent = (h.verify||'')==='PASS'?'✓ HASH PASS':'✗ HASH FAIL';
+  hv.className = 'badge ' + ((h.verify||'')==='PASS'?'pass':'fail');
 
   const npu = e.npu||{};
   setText('npu_backend', npu.backend||'—');
@@ -270,11 +275,13 @@ function renderLive(e) {
 
   const pkgEl = document.getElementById('route_pkg');
   const chuteEl = document.getElementById('route_chute');
-  pkgEl.textContent = e.final_package_id||'PKG—';
+  pkgEl.textContent = (e.recognition && e.recognition.final_package_id)||'PKG—';
   chuteEl.textContent = ({'PASS':'滑槽 '+(e.target_zone||'—'),'PASS_WITH_LOG':'滑槽 '+(e.target_zone||'—')+' ⚠','REVIEW':'复核区','BLOCK':'拦截'})[e.action]||(e.target_zone||'—');
   const cm = {'PASS':'route-chute-'+((e.target_zone||'a').toLowerCase()),'PASS_WITH_LOG':'route-chute-'+((e.target_zone||'a').toLowerCase()),'REVIEW':'route-review','BLOCK':'route-block'};
-  chuteEl.className = 'route-item ' + (cm[e.action]||'');
-  updateGates(e.m33||{}, e.target_zone||'', e.action||'');
+  const d2 = e.decision || {};
+  const r2 = e.rule || {};
+  chuteEl.className = 'route-item ' + (cm[d2.action]||'');
+  updateGates(e.m33||{}, r2.target_zone||'', d2.action||'');
 }
 
 function toggleLive() {
