@@ -343,13 +343,15 @@ function drawBeltFrame() {
 
   // 4 Exit zones
   const exits = [
-    { x:200, label:'A', color:'#22c55e' },
-    { x:410, label:'B', color:'#38bdf8' },
-    { x:620, label:'C', color:'#fbbf24' },
-    { x:830, label:'复核', color:'#f472b6' }
+    { x:160, label:'A', color:'#22c55e' },
+    { x:310, label:'B', color:'#38bdf8' },
+    { x:460, label:'C', color:'#fbbf24' },
+    { x:610, label:'D', color:'#a78bfa' },
+    { x:760, label:'复核', color:'#f472b6' }
   ];
 
-  const activeZone = BELT.action === 'REVIEW' ? '复核' : BELT.targetZone;
+  const activeZone = BELT.action === 'REVIEW' ? '复核' :
+    (BELT.action === 'BLOCK' ? '' : (BELT.targetZone||''));
 
   exits.forEach(ex => {
     const isActive = (BELT.action !== 'BLOCK') && (activeZone === ex.label);
@@ -441,20 +443,19 @@ function getCurrentPkgId() {
 }
 
 function updateGates(m33, targetZone, action) {
-  const zoneMap = { 'A':200, 'B':410, 'C':620 };
+  const zoneMap = { 'A':160, 'B':310, 'C':460, 'D':610 };
   BELT.m33 = m33;
   BELT.targetZone = targetZone;
   BELT.action = action;
 
-  // Reset package to entry for new frame
   resetPackage();
 
   if (action === 'BLOCK') {
     BELT.targetX = 20;
   } else if (action === 'REVIEW') {
-    BELT.targetX = 830;
+    BELT.targetX = 760;
   } else {
-    BELT.targetX = zoneMap[targetZone] || 200;
+    BELT.targetX = zoneMap[targetZone] || 160;
   }
 }
 
