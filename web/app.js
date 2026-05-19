@@ -1,5 +1,5 @@
 // EdgeGuard-Sort Web Digital Twin Dashboard
-const STATE = { events:[], idx:0, autoTimer:null, playing:false, liveMode:false, liveTimer:null, liveUrl:'../output' };
+const STATE = { events:[], idx:0, autoTimer:null, playing:false, liveMode:false, liveTimer:null, liveUrl:'http://172.20.10.7:8080' };
 
 // ── Init: try to load from events_json/ ──
 async function loadJSON() {
@@ -9,7 +9,7 @@ async function loadJSON() {
     for (let i = 1; i <= 20; i++) {
       const sid = String(i).padStart(4,'0');
       try {
-        const resp = await fetch(`../output/events_json/event_${sid}.json`);
+        const resp = await fetch(STATE.liveUrl + `/events_json/event_${sid}.json`);
         if (resp.ok) files.push(await resp.json());
         else break;
       } catch(e) { break; }
