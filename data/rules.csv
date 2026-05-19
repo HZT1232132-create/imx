@@ -1,6 +1,5 @@
 package_id,name,target_zone,type
 PKG001,电子元件,A,normal
-PKG002,机械零件,B,normal
-PKG003,食品包装,A,normal
+PKG003,食品包装,B,normal
 PKG004,医疗用品,C,fragile
-PKG005,测试货物,B,test
+PKG005,测试货物,D,test

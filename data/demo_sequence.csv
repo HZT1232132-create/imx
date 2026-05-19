@@ -1,7 +1,7 @@
-image,current_zone,scene
-pkg001_normal.png,A,正常分拣
-pkg002_wrong.png,A,错误异常
-pkg003_qr_damaged.png,A,二维码损坏OCR补救
-pkg004_ocr_error.png,A,OCR字符识别纠错处理
-pkg005_unknown.png,A,未知货物
-pkg006_unreadable.png,A,标签不可读
+image,scene
+pkg001_normal.png,正常标签-QR识别PKG001-目标A区
+pkg002_wrong.png,外来件-标签PKG002不属于本仓库
+pkg003_qr_damaged.png,QR损坏-OCR救回PKG003-目标B区
+pkg004_ocr_error.png,OCR混淆-规则纠错为PKG004-目标C区
+pkg005_unknown.png,未知货物-标签PKG999不在规则库
+pkg006_unreadable.png,标签完全不可读

@@ -54,8 +54,8 @@ static void drawHUD(cv::Mat& display, const ProcessResult& res, const StatsManag
         + std::string(engine.idStatusName(res.idStatus)));
 
     // Line 3: Zone + Sort
-    put("Target Zone: " + res.targetZone + "  |  Current Zone: " + res.currentZone
-        + "  |  Sort: " + std::string(engine.sortStatusName(res.sortStatus)));
+    put("Target Zone: " + res.targetZone + "  |  Sort: "
+        + std::string(engine.sortStatusName(res.sortStatus)));
 
     // Line 4: Risk level with color
     cv::Scalar riskColor = cv::Scalar(0, 255, 0);
@@ -453,21 +453,20 @@ int main(int argc, char* argv[]) {
         if (result.idStatus == IdStatus::LABEL_ERROR ||
             result.idStatus == IdStatus::UNKNOWN_PACKAGE) {
             result.sortStatus = SortStatus::CANNOT_JUDGE;
-            result.targetZone = "UNKNOWN";
-            result.message = "无法判断分拣状态，需人工处理";
+            result.targetZone = "REVIEW";
+            result.message = "无法判断分拣状态，需人工复核";
         } else {
             result.targetZone = ruleEngine.getTargetZone(result.finalPackageId);
-            if (result.targetZone == result.currentZone) {
-                result.sortStatus = SortStatus::NORMAL_SORT;
-                result.message = "正确分拣";
+            if (result.targetZone.empty()) {
+                result.targetZone = "REVIEW";
+                result.sortStatus = SortStatus::CANNOT_JUDGE;
+                result.message = "包裹不属于本仓库，需复核";
             } else {
-                result.sortStatus = SortStatus::WRONG_SORT;
-                result.message = "错误：货物应去 " + result.targetZone
-                               + " 区，当前在 " + result.currentZone + " 区";
+                result.sortStatus = SortStatus::NORMAL_SORT;
+                result.message = "分拣至 " + result.targetZone + " 区";
             }
         }
         std::cout << "Sort: target=" << result.targetZone
-                  << " current=" << result.currentZone
                   << " → " << riskEngine.sortStatusName(result.sortStatus) << "\n";
 
         // ================================================================
@@ -541,7 +540,7 @@ int main(int argc, char* argv[]) {
         cmd.frameId = frameIdx;
         cmd.packageId = result.finalPackageId;
         cmd.targetZone = result.targetZone;
-        cmd.currentZone = result.currentZone;
+        cmd.currentZone = "";
         cmd.riskLevel = static_cast<int>(result.riskLevel);
         cmd.action = result.action;
         cmd.decisionReason = result.decisionReason;

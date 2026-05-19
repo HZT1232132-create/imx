@@ -69,7 +69,7 @@ UnifiedEvent WebEventExporter::buildEvent(
 
     // Sort
     ev.targetZone = result.targetZone;
-    ev.currentZone = result.currentZone;
+    ev.currentZone = "";  // removed: system doesn't know current zone
     ev.sortStatus = [&]() -> std::string {
         switch (result.sortStatus) {
         case SortStatus::NORMAL_SORT: return "NORMAL_SORT";

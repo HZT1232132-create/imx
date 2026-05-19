@@ -69,7 +69,7 @@ function render() {
   setText('a55_qr', rec.qr_result||'—');
   setText('a55_ocr', rec.ocr_result||'—');
   setText('a55_target', e.rule ? e.rule.target_zone : '—');
-  setText('a55_current', e.rule ? e.rule.current_zone : '—');
+  setText('a55_current', '');  // removed: system doesn't know current zone
   setText('a55_sort', e.rule ? e.rule.sort_status : '—');
   setText('a55_action', e.decision ? e.decision.action : '—');
   setText('a55_conf', e.decision && e.decision.confidence ? (e.decision.confidence*100).toFixed(0)+'%' : '—');
@@ -230,7 +230,7 @@ function renderLive(e) {
   setText('a55_qr', rec.qr_result||'—');
   setText('a55_ocr', rec.ocr_result||'—');
   setText('a55_target', e.rule ? e.rule.target_zone : '—');
-  setText('a55_current', e.rule ? e.rule.current_zone : '—');
+  setText('a55_current', '');  // removed: system doesn't know current zone
   setText('a55_sort', e.rule ? e.rule.sort_status : '—');
   setText('a55_action', e.decision ? e.decision.action : '—');
   setText('a55_conf', e.decision && e.decision.confidence ? (e.decision.confidence*100).toFixed(0)+'%' : '—');
