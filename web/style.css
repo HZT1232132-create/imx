@@ -75,12 +75,16 @@ header h1 { font-size:1.4rem; color:#38bdf8; }
 .sort-panel { text-align:center; padding:20px; }
 .gates-row { display:flex; justify-content:center; gap:24px; margin-bottom:18px; }
 .gate-unit { text-align:center; }
-.gate-canvas { background:#0f172a; border-radius:8px; border:2px solid #334155; display:block; margin:0 auto 4px; }
-.gate-name { font-size:0.75rem; color:#94a3b8; font-weight:600; }
-.gate-status { font-size:0.7rem; padding:2px 8px; border-radius:4px; display:inline-block; }
-.gate-open { color:#6ee7b7; }
-.gate-closed { color:#fca5a5; }
-.gate-active .gate-canvas { border-color:#38bdf8; box-shadow:0 0 12px rgba(56,189,248,0.3); }
+.chute-box { background:#0f172a; border:2px solid #334155; border-radius:10px; padding:12px 20px; text-align:center; min-width:100px; transition:all 0.3s; }
+.chute-box.active { border-color:#38bdf8; box-shadow:0 0 16px rgba(56,189,248,0.5); transform:scale(1.05); }
+.chute-box.active-open { border-color:#22c55e; box-shadow:0 0 16px rgba(34,197,94,0.5); }
+.chute-box.active-block { border-color:#ef4444; box-shadow:0 0 16px rgba(239,68,68,0.5); }
+.chute-icon { font-size:1.6rem; margin-bottom:4px; }
+.chute-label { font-size:0.75rem; color:#94a3b8; font-weight:600; }
+.chute-gate { font-size:0.72rem; padding:3px 8px; border-radius:4px; margin-top:6px; font-weight:700; transition:all 0.3s; }
+.chute-gate.open { background:#065f46; color:#6ee7b7; }
+.chute-gate.closed { background:#7f1d1d; color:#fca5a5; }
+.chute-gate.block { background:#4a044e; color:#f0abfc; }
 .sort-route { display:flex; align-items:center; justify-content:center; gap:20px; font-size:1.1rem; }
 .route-item { padding:8px 24px; border-radius:8px; font-weight:700; background:#334155; }
 .route-arrow { color:#38bdf8; font-size:1.4rem; }
