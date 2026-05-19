@@ -35,6 +35,9 @@ struct ControlStatus {
     int heartbeatCount = 0;
     int timeoutCount   = 0;
 
+    // 原因
+    std::string reason;
+
     // 任务状态
     bool commandRxOk   = true;
     bool sortControlOk = true;
