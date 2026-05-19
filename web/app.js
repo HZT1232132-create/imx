@@ -350,7 +350,7 @@ function drawBeltFrame() {
     { x:760, label:'复核', color:'#f472b6' }
   ];
 
-  const activeZone = BELT.action === 'PASS' ? (BELT.targetZone||'') : '复核';
+  const activeZone = (BELT.action === 'PASS' || BELT.action === 'PASS_WITH_LOG') ? (BELT.targetZone||'') : '复核';
 
   exits.forEach(ex => {
     const isActive = (activeZone === ex.label);
@@ -406,7 +406,7 @@ function drawBeltFrame() {
     ctx.fillRect(px-13, py+17, 26, 8);
 
     // Box
-    const pkgColor = BELT.action === 'PASS' ? '#22c55e' : '#fbbf24';
+    const pkgColor = (BELT.action === 'PASS' || BELT.action === 'PASS_WITH_LOG') ? '#22c55e' : '#fbbf24';
     ctx.fillStyle = pkgColor;
     ctx.fillRect(px-10, py-5, 20, 20);
     ctx.strokeStyle = '#fff';
@@ -444,11 +444,11 @@ function updateGates(m33, targetZone, action) {
 
   resetPackage();
 
-  // Only PASS (perfect match + normal sort) goes to target zone; rest → review
-  if (action === 'PASS') {
+  // PASS / PASS_WITH_LOG → target zone; REVIEW / BLOCK → 复核区
+  if (action === 'PASS' || action === 'PASS_WITH_LOG') {
     BELT.targetX = zoneMap[targetZone] || 160;
   } else {
-    BELT.targetX = 760;  // review zone
+    BELT.targetX = 760;
   }
 }
 
