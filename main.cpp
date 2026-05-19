@@ -520,7 +520,16 @@ int main(int argc, char* argv[]) {
         hashLogger.append(hrec);
 
         // ================================================================
-        // Stage 8.5: AI Engine (CPU/NPU) + M33 Control + Web Export (V5)
+        // Stage 8.5: Annotated frame for HUD + output
+        // ================================================================
+        cv::Mat display;
+        image.copyTo(display);
+        drawHUD(display, result, stats, riskEngine, frameIdx, totalFrames);
+        std::filesystem::create_directories("../output");
+        cv::imwrite("../output/frame_" + std::to_string(frameIdx) + ".png", display);
+
+        // ================================================================
+        // Stage 8.6: AI Engine (CPU/NPU) + M33 Control + Web Export (V5)
         // ================================================================
         AIResult ai = aiEngine->infer(image);
         std::cout << "AI: backend=" << ai.backend
@@ -528,7 +537,6 @@ int main(int argc, char* argv[]) {
                   << " conf=" << ai.qualityConfidence
                   << " latency=" << ai.latencyMs << "ms\n";
 
-        // Send decision to M33 (or Mock)
         ControlCommand cmd;
         cmd.frameId = frameIdx;
         cmd.packageId = result.finalPackageId;
@@ -539,7 +547,6 @@ int main(int argc, char* argv[]) {
         cmd.decisionReason = result.decisionReason;
         ControlStatus m33Status = controlBridge->sendCommand(cmd);
 
-        // Export unified event JSON + annotated frame for Web dashboard
         UnifiedEvent uev = webExporter.buildEvent(
             frameIdx, result, ai, m33Status,
             hashLogger.records().empty() ? "0000..." :
@@ -549,7 +556,9 @@ int main(int argc, char* argv[]) {
             "V5.0", "TinyOCR-V1");
         webExporter.exportEvent(uev, display);
 
-        // Track recent high-risk events for HUD
+        // ================================================================
+        // Stage 8.7: Track recent high-risk events for HUD
+        // ================================================================
         if (result.riskLevel >= RiskLevel::LEVEL_3_HIGH) {
             std::string ev = result.imageName + ": "
                            + std::string(riskEngine.levelName(result.riskLevel))
@@ -558,16 +567,8 @@ int main(int argc, char* argv[]) {
         }
 
         // ================================================================
-        // Stage 9: Display
+        // Stage 9: GUI Display (skip if headless)
         // ================================================================
-        cv::Mat display;
-        image.copyTo(display);
-        drawHUD(display, result, stats, riskEngine, frameIdx, totalFrames);
-
-        // Save annotated frame
-        std::filesystem::create_directories("../output");
-        cv::imwrite("../output/frame_" + std::to_string(frameIdx) + ".png", display);
-
         if (!headless) {
             cv::namedWindow("i.MX93 Sorting Simulator", cv::WINDOW_NORMAL);
             cv::resizeWindow("i.MX93 Sorting Simulator", 960, 640);
