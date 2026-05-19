@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EdgeGuard-Sort — FRDM-i.MX93 Digital Twin</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <header>
+    <h1>EdgeGuard-Sort</h1>
+    <span class="subtitle">FRDM-i.MX93 Digital Twin</span>
+    <span id="connection" class="badge disconnected">● 静态回放</span>
+  </header>
+
+  <!-- Main Grid -->
+  <div class="grid">
+
+    <!-- Left: Live Image -->
+    <div class="panel image-panel">
+      <div class="panel-title">当前帧图像</div>
+      <canvas id="imageCanvas"></canvas>
+      <div class="frame-info" id="frameInfo">Frame —/—</div>
+    </div>
+
+    <!-- Center-Top: A55 Pipeline -->
+    <div class="panel">
+      <div class="panel-title">A55 识别管道</div>
+      <table class="kv-table">
+        <tr><td>Package ID</td><td id="a55_pkgId">—</td></tr>
+        <tr><td>识别方法</td><td id="a55_method">—</td></tr>
+        <tr><td>QR 结果</td><td id="a55_qr">—</td></tr>
+        <tr><td>OCR 结果</td><td id="a55_ocr">—</td></tr>
+        <tr><td>目标区</td><td id="a55_target">—</td></tr>
+        <tr><td>当前区</td><td id="a55_current">—</td></tr>
+        <tr><td>分拣状态</td><td id="a55_sort">—</td></tr>
+        <tr><td>决策</td><td id="a55_action">—</td></tr>
+        <tr><td>置信度</td><td id="a55_conf">—</td></tr>
+      </table>
+    </div>
+
+    <!-- Center-Bottom: Risk & Hash -->
+    <div class="panel">
+      <div class="panel-title">风险 & 溯源</div>
+      <div id="riskLevel" class="risk-badge">—</div>
+      <div class="hash-line" id="hashPrev">Prev: —</div>
+      <div class="hash-line" id="hashCurr">Curr: —</div>
+      <div id="hashVerify" class="badge">—</div>
+    </div>
+
+    <!-- Right-Top: NPU AI -->
+    <div class="panel">
+      <div class="panel-title">NPU AI 引擎</div>
+      <table class="kv-table">
+        <tr><td>后端</td><td id="npu_backend">—</td></tr>
+        <tr><td>模型</td><td id="npu_model">—</td></tr>
+        <tr><td>延迟</td><td id="npu_latency">—</td></tr>
+        <tr><td>质量分类</td><td id="npu_quality">—</td></tr>
+        <tr><td>置信度</td><td id="npu_conf">—</td></tr>
+        <tr><td>检测数</td><td id="npu_dets">—</td></tr>
+      </table>
+    </div>
+
+    <!-- Right-Bottom: M33 RTOS -->
+    <div class="panel">
+      <div class="panel-title">M33 FreeRTOS</div>
+      <div id="m33_state" class="state-badge">—</div>
+      <table class="kv-table">
+        <tr><td>LED</td><td><span id="m33_led" class="led-dot"></span></td></tr>
+        <tr><td>蜂鸣器</td><td id="m33_buzzer">—</td></tr>
+        <tr><td>电机</td><td id="m33_motor">—</td></tr>
+        <tr><td>滑槽</td><td id="m33_chute">—</td></tr>
+        <tr><td>闸门</td><td id="m33_gate">—</td></tr>
+        <tr><td>心跳</td><td id="m33_heartbeat">—</td></tr>
+      </table>
+      <div class="task-grid" id="m33_tasks"></div>
+    </div>
+
+    <!-- Sort Routing Visualization -->
+    <div class="panel full-width sort-panel">
+      <div class="panel-title">分拣路由</div>
+      <div class="sort-route" id="sortRoute">
+        <span class="route-item" id="route_pkg">PKG—</span>
+        <span class="route-arrow">→</span>
+        <span class="route-item" id="route_chute">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <footer>
+    <button id="btnPrev" onclick="prevFrame()">◀ 上一帧</button>
+    <span id="progressLabel">0 / 0</span>
+    <button id="btnNext" onclick="nextFrame()">下一帧 ▶</button>
+    <button id="btnAuto" onclick="toggleAuto()">▶ 自动播放</button>
+    <button onclick="loadJSON()">🔄 重新加载</button>
+    <input type="file" id="fileInput" accept=".json" multiple onchange="handleFiles(this.files)" style="display:none">
+    <button onclick="document.getElementById('fileInput').click()">📁 导入 JSON</button>
+  </footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

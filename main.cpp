@@ -19,6 +19,12 @@
 #include "tiny_ocr_engine.h"
 #include "hash_logger.h"
 #include "anomaly_detector.h"
+#include "ai_engine.h"
+#include "control_bridge.h"
+#include "web_event_exporter.h"
+#include "mock_sensor.h"
+#include "cpu_ai_engine.h"
+#include "mock_control_bridge.h"
 
 static void drawHUD(cv::Mat& display, const ProcessResult& res, const StatsManager& stats,
                     const RiskEngine& engine, int frameIdx, int totalFrames) {
@@ -180,6 +186,20 @@ int main(int argc, char* argv[]) {
     DecisionEngine decisionEngine;
     HashLogger hashLogger("V5.0", "TinyOCR-V1");
     AnomalyDetector anomalyDetector;
+
+    // V5.0 new modules: AI Engine, M33 Control Bridge, Web Exporter, Sensor
+    std::cout << "[INIT] Initializing CPU AI Engine...\n";
+    IAIEngine* aiEngine = createCPUAIEngine();
+    aiEngine->loadModel("");
+
+    std::cout << "[INIT] Initializing Mock M33 Control Bridge...\n";
+    IControlBridge* controlBridge = createMockControlBridge();
+
+    std::cout << "[INIT] Initializing Web Event Exporter...\n";
+    WebEventExporter webExporter("../output");
+
+    std::cout << "[INIT] Initializing Mock Sensor...\n";
+    MockSensor mockSensor;
 
     std::cout << "[INIT] All modules initialized.\n\n";
     std::cout << "----------------------------------------\n";
@@ -498,6 +518,36 @@ int main(int argc, char* argv[]) {
         stats.update(result);
         HashRecord hrec = hashLogger.buildRecord(frameIdx, result);
         hashLogger.append(hrec);
+
+        // ================================================================
+        // Stage 8.5: AI Engine (CPU/NPU) + M33 Control + Web Export (V5)
+        // ================================================================
+        AIResult ai = aiEngine->infer(image);
+        std::cout << "AI: backend=" << ai.backend
+                  << " quality=" << ai.qualityClass
+                  << " conf=" << ai.qualityConfidence
+                  << " latency=" << ai.latencyMs << "ms\n";
+
+        // Send decision to M33 (or Mock)
+        ControlCommand cmd;
+        cmd.frameId = frameIdx;
+        cmd.packageId = result.finalPackageId;
+        cmd.targetZone = result.targetZone;
+        cmd.currentZone = result.currentZone;
+        cmd.riskLevel = static_cast<int>(result.riskLevel);
+        cmd.action = result.action;
+        cmd.decisionReason = result.decisionReason;
+        ControlStatus m33Status = controlBridge->sendCommand(cmd);
+
+        // Export unified event JSON + annotated frame for Web dashboard
+        UnifiedEvent uev = webExporter.buildEvent(
+            frameIdx, result, ai, m33Status,
+            hashLogger.records().empty() ? "0000..." :
+                (hashLogger.records().size() >= 2 ?
+                 hashLogger.records()[hashLogger.records().size()-2].currentHash : "0000..."),
+            hashLogger.lastHash(),
+            "V5.0", "TinyOCR-V1");
+        webExporter.exportEvent(uev, display);
 
         // Track recent high-risk events for HUD
         if (result.riskLevel >= RiskLevel::LEVEL_3_HIGH) {

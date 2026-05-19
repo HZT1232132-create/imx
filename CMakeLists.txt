@@ -47,6 +47,10 @@ add_executable(
     src/hash_logger.cpp
     src/anomaly_detector.cpp
     src/label_detector.cpp
+    src/mock_control_bridge.cpp
+    src/cpu_ai_engine.cpp
+    src/web_event_exporter.cpp
+    src/mock_sensor.cpp
 )
 
 target_link_libraries(
