@@ -293,115 +293,138 @@ function toggleLive() {
 }
 
 // ── Conveyor Belt Animation ──
-const BELT = { animId:null, pkgX:20, targetX:20, m33:{}, targetZone:'', action:'' };
+const BELT = { animId:null, pkgX:20, pkgY:50, pkgOut:false, targetX:20, m33:{}, targetZone:'', action:'' };
+
+function resetPackage() {
+  BELT.pkgX = 20;
+  BELT.pkgY = 50;
+  BELT.pkgOut = false;
+}
 
 function drawBeltFrame() {
   const c = document.getElementById('beltCanvas');
   if (!c) { BELT.animId = requestAnimationFrame(drawBeltFrame); return; }
   const ctx = c.getContext('2d');
   const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
 
-  // Belt background
+  // Background
   ctx.fillStyle = '#1e293b';
   ctx.fillRect(0, 0, W, H);
 
-  // Conveyor belt surface
-  const beltY = 50, beltH = 30;
+  const beltY = 50, beltH = 26;
+
+  // Conveyor belt with scrolling rollers
+  const scroll = (Date.now() / 15) % 24;
   ctx.fillStyle = '#334155';
   ctx.fillRect(0, beltY, W, beltH);
-
-  // Belt rollers (animated scrolling)
-  const scroll = (Date.now() / 20) % 24;
   ctx.strokeStyle = '#475569';
   ctx.lineWidth = 1;
   for (let x = -scroll; x < W; x += 24) {
-    ctx.strokeRect(x, beltY-2, 3, beltH+4);
+    ctx.beginPath(); ctx.moveTo(x, beltY); ctx.lineTo(x, beltY+beltH); ctx.stroke();
   }
-  // Belt edge lines
   ctx.strokeStyle = '#64748b';
   ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(0, beltY); ctx.lineTo(W, beltY); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0, beltY+beltH); ctx.lineTo(W, beltY+beltH); ctx.stroke();
+  ctx.strokeRect(0, beltY, W, beltH);
 
-  // 4 Exit zones with diverters
+  // Entry arrow
+  ctx.fillStyle = '#475569';
+  ctx.beginPath(); ctx.moveTo(5, beltY-12); ctx.lineTo(25, beltY-12); ctx.lineTo(25, beltY-5); ctx.fill();
+  ctx.fillStyle = '#64748b';
+  ctx.font = '9px sans-serif';
+  ctx.fillText('入口', 2, beltY-16);
+
+  // 4 Exit zones
   const exits = [
     { x:200, label:'A', color:'#22c55e' },
     { x:410, label:'B', color:'#38bdf8' },
     { x:620, label:'C', color:'#fbbf24' },
-    { x:830, label:'Review', color:'#f472b6' }
+    { x:830, label:'复核', color:'#f472b6' }
   ];
 
+  const activeZone = BELT.action === 'REVIEW' ? '复核' : BELT.targetZone;
+
   exits.forEach(ex => {
-    const isTarget = BELT.action === 'BLOCK' ? false :
-      (BELT.targetZone === ex.label || (ex.label === 'Review' && BELT.action === 'REVIEW'));
+    const isActive = (BELT.action !== 'BLOCK') && (activeZone === ex.label);
+    const blocked = BELT.action === 'BLOCK';
 
-    // Gate frame
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(ex.x-30, beltY-25, 60, beltH+45);
-
-    // Divert arrow
-    ctx.fillStyle = isTarget ? ex.color : '#475569';
+    // Chute opening (downward triangle)
+    ctx.fillStyle = isActive ? ex.color : (blocked ? '#ef4444' : '#475569');
     ctx.beginPath();
-    ctx.moveTo(ex.x, beltY+beltH+8);
-    ctx.lineTo(ex.x-10, beltY+beltH+24);
-    ctx.lineTo(ex.x+10, beltY+beltH+24);
+    ctx.moveTo(ex.x-14, beltY+beltH);
+    ctx.lineTo(ex.x+14, beltY+beltH);
+    ctx.lineTo(ex.x, beltY+beltH+22);
     ctx.closePath();
     ctx.fill();
 
-    // Gate bars — open = bars slide apart, closed = bars down
-    if (isTarget) {
+    // Gate bars
+    if (isActive) {
+      // Open: bars retracted to sides
       ctx.fillStyle = ex.color;
-      ctx.fillRect(ex.x-18, beltY-22, 6, 12);  // left bar up
-      ctx.fillRect(ex.x+12, beltY-22, 6, 12);  // right bar up
-      ctx.fillRect(ex.x-18, beltY+beltH+5, 6, 12);
-      ctx.fillRect(ex.x+12, beltY+beltH+5, 6, 12);
-      // Glow
-      ctx.shadowColor = ex.color;
-      ctx.shadowBlur = 8;
-      ctx.fillStyle = 'transparent';
-      ctx.fillRect(ex.x-30, beltY-25, 60, beltH+45);
-      ctx.shadowBlur = 0;
+      ctx.fillRect(ex.x-20, beltY-16, 4, 14);
+      ctx.fillRect(ex.x+16, beltY-16, 4, 14);
+      ctx.fillRect(ex.x-20, beltY+beltH-20, 4, 14);
+      ctx.fillRect(ex.x+16, beltY+beltH-20, 4, 14);
     } else {
-      // Closed bars
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(ex.x-12, beltY-22, 4, beltH+42);
-      ctx.fillRect(ex.x+8, beltY-22, 4, beltH+42);
+      // Closed: bars across
+      ctx.fillStyle = blocked ? '#ef4444' : '#475569';
+      ctx.fillRect(ex.x-14, beltY-8, 4, beltH+14);
+      ctx.fillRect(ex.x-6, beltY-8, 4, beltH+14);
+      ctx.fillRect(ex.x+2, beltY-8, 4, beltH+14);
+      ctx.fillRect(ex.x+10, beltY-8, 4, beltH+14);
     }
 
-    // Zone label
+    // Label
     ctx.fillStyle = ex.color;
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(ex.label, ex.x, beltY-28);
+    ctx.fillText(ex.label, ex.x, beltY-18);
   });
 
-  // Package on belt — move toward target or scroll
-  if (BELT.targetX > BELT.pkgX) {
-    BELT.pkgX += 1.5;  // smooth slide
+  // Package movement
+  const arrived = BELT.pkgX >= BELT.targetX - 2 && BELT.pkgX <= BELT.targetX + 2;
+  if (arrived && !BELT.pkgOut && BELT.action !== 'BLOCK') {
+    BELT.pkgOut = true;  // start sliding out
+  }
+  if (BELT.pkgOut) {
+    BELT.pkgY += 1.5;  // slide down through gate
+  } else if (!arrived) {
+    BELT.pkgX += 1.2;  // move along belt
     if (BELT.pkgX > BELT.targetX) BELT.pkgX = BELT.targetX;
   }
 
-  const px = BELT.pkgX;
-  // Package shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(px-13, beltY+18, 26, 10);
-  // Package box
-  const pkgColor = BELT.action === 'BLOCK' ? '#ef4444' :
-    (BELT.action === 'REVIEW' ? '#fbbf24' : '#22c55e');
-  ctx.fillStyle = pkgColor;
-  ctx.fillRect(px-10, beltY-5, 20, 22);
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(px-10, beltY-5, 20, 22);
-  // Label on package
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(px-6, beltY+2, 12, 8);
-  ctx.fillStyle = '#0f172a';
-  ctx.font = '6px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(getCurrentPkgId().substring(0,5), px, beltY+9);
+  // Draw package (if not fully exited)
+  if (BELT.pkgY < H + 20) {
+    const px = BELT.pkgX, py = BELT.pkgY;
 
-  ctx.textAlign = 'start';
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(px-13, py+17, 26, 8);
+
+    // Box
+    const pkgColor = BELT.action === 'BLOCK' ? '#ef4444' :
+      (BELT.action === 'REVIEW' ? '#fbbf24' : '#22c55e');
+    ctx.fillStyle = pkgColor;
+    ctx.fillRect(px-10, py-5, 20, 20);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(px-10, py-5, 20, 20);
+
+    // Label
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(px-6, py+1, 12, 7);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '5.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(getCurrentPkgId().substring(0,5), px, py+7);
+    ctx.textAlign = 'start';
+  }
+
+  // Belt edge highlight
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(0, beltY, W, beltH);
+
   BELT.animId = requestAnimationFrame(drawBeltFrame);
 }
 
@@ -411,26 +434,24 @@ function getCurrentPkgId() {
 }
 
 function updateGates(m33, targetZone, action) {
+  const zoneMap = { 'A':200, 'B':410, 'C':620 };
   BELT.m33 = m33;
   BELT.targetZone = targetZone;
   BELT.action = action;
 
-  // Set target X based on zone
-  const zoneMap = { 'A':200, 'B':410, 'C':620 };
+  // Reset package to entry for new frame
+  resetPackage();
+
   if (action === 'BLOCK') {
-    BELT.targetX = 20;  // stays at entry — blocked
+    BELT.targetX = 20;
   } else if (action === 'REVIEW') {
     BELT.targetX = 830;
   } else {
     BELT.targetX = zoneMap[targetZone] || 200;
   }
-
-  // Animate package from entry
-  BELT.pkgX = Math.max(BELT.pkgX, 18);  // don't go backwards unless blocked
-  if (action === 'BLOCK') BELT.pkgX = 20;
 }
 
-// Start belt animation
+// Start animation loop
 requestAnimationFrame(drawBeltFrame);
 
 // Keyboard navigation
