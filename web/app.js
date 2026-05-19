@@ -1,5 +1,5 @@
 // EdgeGuard-Sort Web Digital Twin Dashboard
-const STATE = { events:[], idx:0, autoTimer:null, playing:false };
+const STATE = { events:[], idx:0, autoTimer:null, playing:false, liveMode:false, liveTimer:null, liveUrl:'../output' };
 
 // ── Init: try to load from events_json/ ──
 async function loadJSON() {
@@ -182,6 +182,111 @@ function toggleAuto() {
 }
 function showStatus(msg) {
   document.getElementById('frameInfo').textContent = msg;
+}
+
+// ── Live mode: poll latest_event.json and latest_frame.b64 ──
+async function fetchLatest() {
+  try {
+    const resp = await fetch(STATE.liveUrl + '/latest_event.json');
+    if (!resp.ok) return;
+    const ev = await resp.json();
+    // Fetch thumbnail
+    try {
+      const imgResp = await fetch(STATE.liveUrl + '/latest_frame.b64');
+      if (imgResp.ok) {
+        const blob = await imgResp.blob();
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.getElementById('imageCanvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          if (ev.detections) drawDetections(canvas.getContext('2d'), ev.detections);
+        };
+        img.src = url;
+      }
+    } catch(e) {}
+    // Push into events and render
+    STATE.events = [ev];
+    STATE.idx = 0;
+    document.getElementById('connection').textContent = '● LIVE';
+    document.getElementById('connection').className = 'badge connected';
+    renderLive(ev);
+  } catch(e) {}
+}
+
+function renderLive(e) {
+  if (!e) return;
+  setText('frameInfo', `LIVE — Frame ${e.frame_id||'?'} — ${e.image_name||''}`);
+  setText('a55_pkgId', e.final_package_id||'—');
+  setText('a55_method', e.recognition_method||'—');
+  setText('a55_qr', e.qr_result||'—');
+  setText('a55_ocr', e.ocr_result||'—');
+  setText('a55_target', e.target_zone||'—');
+  setText('a55_current', e.current_zone||'—');
+  setText('a55_sort', e.sort_status||'—');
+  setText('a55_action', e.action||'—');
+  setText('a55_conf', e.decision_confidence ? (e.decision_confidence*100).toFixed(0)+'%' : '—');
+
+  const riskMap = { 'LEVEL_0_NORMAL':'🟢 正常', 'LEVEL_1_LOW':'🔵 低风险', 'LEVEL_2_MEDIUM':'🟡 中等', 'LEVEL_3_HIGH':'🟠 高风险', 'LEVEL_4_CRITICAL':'🔴 危险' };
+  const rk = e.risk_level||'';
+  const riskEl = document.getElementById('riskLevel');
+  riskEl.textContent = riskMap[rk] || rk || '—';
+  riskEl.className = 'risk-badge risk-' + (rk.includes('0')?0:rk.includes('1')?1:rk.includes('2')?2:rk.includes('3')?3:4);
+
+  setText('hashPrev','Prev: '+(e.prev_hash||'—').substring(0,24)+'...');
+  setText('hashCurr','Curr: '+(e.current_hash||'—').substring(0,24)+'...');
+  const hv = document.getElementById('hashVerify');
+  hv.textContent = e.verify==='PASS'?'✓ HASH PASS':'✗ HASH FAIL';
+  hv.className = 'badge ' + (e.verify==='PASS'?'pass':'fail');
+
+  const npu = e.npu||{};
+  setText('npu_backend', npu.backend||'—');
+  setText('npu_model', npu.model||'—');
+  setText('npu_latency', npu.latency_ms ? npu.latency_ms.toFixed(1)+' ms' : '—');
+  setText('npu_quality', npu.quality_class||'—');
+  setText('npu_conf', npu.confidence ? (npu.confidence*100).toFixed(1)+'%' : '—');
+  setText('npu_dets', e.detections ? e.detections.length : 0);
+
+  const m33 = e.m33||{};
+  const ms = document.getElementById('m33_state');
+  ms.textContent = m33.state||'—';
+  ms.className = 'state-badge ' + ((m33.state||'').includes('LOCK')?'state-lock':(m33.state||'').includes('BLOCK')?'state-block':(m33.state||'').includes('SORT')?'state-sort':'state-idle');
+  const led = document.getElementById('m33_led');
+  led.className = 'led-dot led-' + ({green:'green',yellow:'yellow',red:'red'}[m33.led]||'off');
+  setText('m33_buzzer', m33.buzzer||'—');
+  setText('m33_motor', m33.motor||'—');
+  setText('m33_chute', m33.chute||'—');
+  setText('m33_gate', m33.gate||'—');
+  setText('m33_heartbeat', m33.heartbeat_ok!==false ? '✓ OK ('+(m33.heartbeat_count||0)+')' : '✗ FAIL');
+
+  const tasksDiv = document.getElementById('m33_tasks');
+  tasksDiv.innerHTML = ['CmdRx','SortCtrl','Safety','StatusTx','VirtualIO'].map(t =>
+    `<span class="task-chip ${m33[t.toLowerCase()+'_ok']!==false?'task-ok':'task-err'}">${t}:${m33[t.toLowerCase()+'_ok']!==false?'OK':'ERR'}</span>`
+  ).join('');
+
+  const pkgEl = document.getElementById('route_pkg');
+  const chuteEl = document.getElementById('route_chute');
+  pkgEl.textContent = e.final_package_id||'PKG—';
+  chuteEl.textContent = ({'PASS':'滑槽 '+(e.target_zone||'—'),'PASS_WITH_LOG':'滑槽 '+(e.target_zone||'—')+' ⚠','REVIEW':'复核区','BLOCK':'拦截'})[e.action]||(e.target_zone||'—');
+  const cm = {'PASS':'route-chute-'+((e.target_zone||'a').toLowerCase()),'PASS_WITH_LOG':'route-chute-'+((e.target_zone||'a').toLowerCase()),'REVIEW':'route-review','BLOCK':'route-block'};
+  chuteEl.className = 'route-item ' + (cm[e.action]||'');
+}
+
+function toggleLive() {
+  if (STATE.liveMode) {
+    clearInterval(STATE.liveTimer);
+    STATE.liveMode = false;
+    document.getElementById('btnLive').textContent = '🔴 实时';
+    document.getElementById('connection').textContent = '● 静态回放';
+    document.getElementById('connection').className = 'badge disconnected';
+  } else {
+    fetchLatest();
+    STATE.liveTimer = setInterval(fetchLatest, 500);
+    STATE.liveMode = true;
+    document.getElementById('btnLive').textContent = '⏸ 停止';
+  }
 }
 
 // Keyboard navigation

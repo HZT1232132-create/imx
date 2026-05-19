@@ -198,5 +198,21 @@ void WebEventExporter::exportEvent(const UnifiedEvent& event, const cv::Mat& ann
     imgName << "frame_" << std::setfill('0') << std::setw(4) << event.frameId << ".jpg";
     cv::imwrite(m_framesDir + "/" + imgName.str(), annotatedFrame);
 
+    // Also write latest_event.json (overwrite, for live polling)
+    {
+        std::ofstream lf(m_outputDir + "/latest_event.json");
+        if (lf.is_open()) { lf << json.str(); lf.close(); }
+    }
+    // And encode frame as base64 for live display
+    {
+        std::vector<uchar> buf;
+        cv::imencode(".jpg", annotatedFrame, buf);
+        std::ofstream bf(m_outputDir + "/latest_frame.b64");
+        if (bf.is_open()) {
+            for (uchar c : buf) bf << (char)c;
+            bf.close();
+        }
+    }
+
     std::cout << "[WebExport] " << fname.str() << " + " << imgName.str() << std::endl;
 }
