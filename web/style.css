@@ -73,6 +73,14 @@ header h1 { font-size:1.4rem; color:#38bdf8; }
 .task-err { background:#7f1d1d; color:#fca5a5; }
 
 .sort-panel { text-align:center; padding:20px; }
+.gates-row { display:flex; justify-content:center; gap:24px; margin-bottom:18px; }
+.gate-unit { text-align:center; }
+.gate-canvas { background:#0f172a; border-radius:8px; border:2px solid #334155; display:block; margin:0 auto 4px; }
+.gate-name { font-size:0.75rem; color:#94a3b8; font-weight:600; }
+.gate-status { font-size:0.7rem; padding:2px 8px; border-radius:4px; display:inline-block; }
+.gate-open { color:#6ee7b7; }
+.gate-closed { color:#fca5a5; }
+.gate-active .gate-canvas { border-color:#38bdf8; box-shadow:0 0 12px rgba(56,189,248,0.3); }
 .sort-route { display:flex; align-items:center; justify-content:center; gap:20px; font-size:1.1rem; }
 .route-item { padding:8px 24px; border-radius:8px; font-weight:700; background:#334155; }
 .route-arrow { color:#38bdf8; font-size:1.4rem; }

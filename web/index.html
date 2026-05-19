@@ -78,9 +78,31 @@
       <div class="task-grid" id="m33_tasks"></div>
     </div>
 
-    <!-- Sort Routing Visualization -->
-    <div class="panel full-width sort-panel">
-      <div class="panel-title">分拣路由</div>
+    <!-- Sort Routing: 4 Chutes with Gates -->
+    <div class="panel full-width">
+      <div class="panel-title">分拣路由 — 四滑槽闸门</div>
+      <div class="gates-row" id="gatesRow">
+        <div class="gate-unit" id="gateA">
+          <canvas class="gate-canvas" width="100" height="70"></canvas>
+          <div class="gate-name">滑槽 A</div>
+          <div class="gate-status" id="gateStatusA">关闭</div>
+        </div>
+        <div class="gate-unit" id="gateB">
+          <canvas class="gate-canvas" width="100" height="70"></canvas>
+          <div class="gate-name">滑槽 B</div>
+          <div class="gate-status" id="gateStatusB">关闭</div>
+        </div>
+        <div class="gate-unit" id="gateC">
+          <canvas class="gate-canvas" width="100" height="70"></canvas>
+          <div class="gate-name">滑槽 C</div>
+          <div class="gate-status" id="gateStatusC">关闭</div>
+        </div>
+        <div class="gate-unit" id="gateReview">
+          <canvas class="gate-canvas" width="100" height="70"></canvas>
+          <div class="gate-name">复核区</div>
+          <div class="gate-status" id="gateStatusReview">关闭</div>
+        </div>
+      </div>
       <div class="sort-route" id="sortRoute">
         <span class="route-item" id="route_pkg">PKG—</span>
         <span class="route-arrow">→</span>

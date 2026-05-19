@@ -1,5 +1,5 @@
 // EdgeGuard-Sort Web Digital Twin Dashboard
-const STATE = { events:[], idx:0, autoTimer:null, playing:false, liveMode:false, liveTimer:null, liveUrl:'http://172.20.10.7:8080' };
+const STATE = { events:[], idx:0, autoTimer:null, playing:false, liveMode:false, liveTimer:null, liveUrl:'' };
 
 // ── Init: try to load from events_json/ ──
 async function loadJSON() {
@@ -146,6 +146,8 @@ function render() {
     'BLOCK':'route-block'
   };
   chuteEl.className = 'route-item ' + (chuteClassMap[e.action]||'');
+  // Update gates
+  updateGates(e.m33||{}, e.target_zone||'', e.action||'');
 }
 
 // ── Helpers ──
@@ -272,6 +274,7 @@ function renderLive(e) {
   chuteEl.textContent = ({'PASS':'滑槽 '+(e.target_zone||'—'),'PASS_WITH_LOG':'滑槽 '+(e.target_zone||'—')+' ⚠','REVIEW':'复核区','BLOCK':'拦截'})[e.action]||(e.target_zone||'—');
   const cm = {'PASS':'route-chute-'+((e.target_zone||'a').toLowerCase()),'PASS_WITH_LOG':'route-chute-'+((e.target_zone||'a').toLowerCase()),'REVIEW':'route-review','BLOCK':'route-block'};
   chuteEl.className = 'route-item ' + (cm[e.action]||'');
+  updateGates(e.m33||{}, e.target_zone||'', e.action||'');
 }
 
 function toggleLive() {
@@ -286,6 +289,83 @@ function toggleLive() {
     STATE.liveTimer = setInterval(fetchLatest, 500);
     STATE.liveMode = true;
     document.getElementById('btnLive').textContent = '⏸ 停止';
+  }
+}
+
+// ── Gate animation: 4 chute gates ──
+function drawGate(canvasId, isOpen, isActive) {
+  const c = document.getElementById(canvasId);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Frame
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(15, 8, 70, 54);
+
+  // Gate bars — slide up when open
+  const barW = 10;
+  const gap = 14;
+  const openY = isOpen ? -20 : 8;
+  ctx.fillStyle = isActive ? '#38bdf8' : (isOpen ? '#22c55e' : '#ef4444');
+  for (let i = 0; i < 4; i++) {
+    const x = 20 + i * (barW + gap);
+    ctx.fillRect(x, openY, barW, 54 - (isOpen ? 0 : 0));
+  }
+
+  // Package icon approaching
+  if (isActive) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(50, isOpen ? 55 : 65, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '8px sans-serif';
+    ctx.fillText('PKG', 38, isOpen ? 57 : 67);
+  }
+}
+
+function updateGates(m33, targetZone, action) {
+  // Reset all
+  ['A','B','C','Review'].forEach(ch => {
+    const unit = document.getElementById('gate'+ch);
+    if (unit) unit.className = 'gate-unit';
+    drawGate('gateCanvas'+ch, false, false);
+    const st = document.getElementById('gateStatus'+ch);
+    if (st) { st.textContent = '关闭'; st.className = 'gate-status gate-closed'; }
+  });
+
+  // Determine active chute
+  let activeChute = null;
+  if (action === 'PASS' || action === 'PASS_WITH_LOG') activeChute = targetZone;
+  else if (action === 'REVIEW') activeChute = 'Review';
+  // BLOCK — all gates stay closed
+
+  if (activeChute) {
+    const canvId = 'gateCanvas' + activeChute;
+    drawGate(canvId, true, true);
+    const unit = document.getElementById('gate'+activeChute);
+    if (unit) unit.className = 'gate-unit gate-active';
+    const st = document.getElementById('gateStatus'+activeChute);
+    if (st) { st.textContent = '开启'; st.className = 'gate-status gate-open'; }
+  }
+
+  // Also animate motor
+  if (m33.motor === 'run' || m33.motor === 'slow') {
+    if (activeChute) {
+      const canvId = 'gateCanvas' + activeChute;
+      const c = document.getElementById(canvId);
+      if (c) {
+        const ctx = c.getContext('2d');
+        const t = Date.now() / 100;
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(50 + Math.sin(t)*5, (m33.gate === 'open' ? 55 : 65), 6, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
   }
 }
 
