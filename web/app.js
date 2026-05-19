@@ -350,7 +350,7 @@ function drawBeltFrame() {
     { x:760, label:'复核', color:'#f472b6' }
   ];
 
-  const activeZone = BELT.action === 'REVIEW' ? '复核' : (BELT.targetZone||'');
+  const activeZone = BELT.action === 'PASS' ? (BELT.targetZone||'') : '复核';
 
   exits.forEach(ex => {
     const isActive = (activeZone === ex.label);
@@ -406,7 +406,7 @@ function drawBeltFrame() {
     ctx.fillRect(px-13, py+17, 26, 8);
 
     // Box
-    const pkgColor = BELT.action === 'REVIEW' ? '#fbbf24' : '#22c55e';
+    const pkgColor = BELT.action === 'PASS' ? '#22c55e' : '#fbbf24';
     ctx.fillStyle = pkgColor;
     ctx.fillRect(px-10, py-5, 20, 20);
     ctx.strokeStyle = '#fff';
@@ -444,10 +444,11 @@ function updateGates(m33, targetZone, action) {
 
   resetPackage();
 
-  if (action === 'REVIEW') {
-    BELT.targetX = 760;
-  } else {
+  // Only PASS (perfect match + normal sort) goes to target zone; rest → review
+  if (action === 'PASS') {
     BELT.targetX = zoneMap[targetZone] || 160;
+  } else {
+    BELT.targetX = 760;  // review zone
   }
 }
 
