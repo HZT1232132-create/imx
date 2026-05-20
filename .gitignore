@@ -23,3 +23,8 @@ runs/
 *.docx
 *.bat
 *.zip
+
+# NPU binaries (from NXP BSP)
+models/*.so*
+models/*.tar.gz
+models/vela_output/
